@@ -310,3 +310,94 @@ describe('Dev notes validation', () => {
     expect(todosSource).toContain('writeTodos');
   });
 });
+
+// ── Regression & boundary tests (added by test-agent QA pass) ──
+
+describe('Regression: POST /todos response structure', () => {
+  it('id field is a non-empty string', async () => {
+    const res = await request(app).post('/todos').send({ title: 'ID check' });
+    expect(typeof res.body.id).toBe('string');
+    expect(res.body.id.length).toBeGreaterThan(0);
+  });
+
+  it('completed field is boolean false (not falsy)', async () => {
+    const res = await request(app).post('/todos').send({ title: 'Bool check' });
+    expect(res.body.completed).not.toBe(0);
+    expect(res.body.completed).not.toBe('');
+    expect(res.body.completed).not.toBeNull();
+    expect(res.body.completed).toBe(false);
+  });
+
+  it('createdAt field uses ISO 8601 format with Z suffix', async () => {
+    const res = await request(app).post('/todos').send({ title: 'ISO check' });
+    expect(res.body.createdAt).toMatch(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/);
+  });
+
+  it('does not include _id or __v (no database leakage)', async () => {
+    const res = await request(app).post('/todos').send({ title: 'No leak' });
+    expect(res.body).not.toHaveProperty('_id');
+    expect(res.body).not.toHaveProperty('__v');
+  });
+});
+
+describe('Regression: GET /todos response consistency', () => {
+  it('returns 200 status for GET (never 204)', async () => {
+    const res = await request(app).get('/todos');
+    expect(res.status).toBe(200);
+    expect(res.status).not.toBe(204);
+  });
+
+  it('response body is always an array type', async () => {
+    await request(app).post('/todos').send({ title: 'Array check' });
+    const res = await request(app).get('/todos');
+    expect(Array.isArray(res.body)).toBe(true);
+  });
+
+  it('todos are returned in creation order after multiple inserts', async () => {
+    const titles = ['First', 'Second', 'Third', 'Fourth', 'Fifth'];
+    for (const title of titles) {
+      await request(app).post('/todos').send({ title });
+    }
+    const res = await request(app).get('/todos');
+    expect(res.body.map((t) => t.title)).toEqual(titles);
+  });
+});
+
+describe('Regression: POST then GET round-trip integrity', () => {
+  it('created todo is immediately visible via GET', async () => {
+    const postRes = await request(app).post('/todos').send({ title: 'Visible' });
+    const getRes = await request(app).get('/todos');
+    const found = getRes.body.find((t) => t.id === postRes.body.id);
+    expect(found).toBeDefined();
+    expect(found.title).toBe('Visible');
+    expect(found.completed).toBe(false);
+    expect(found.createdAt).toBe(postRes.body.createdAt);
+  });
+
+  it('multiple todos maintain their individual identities', async () => {
+    const r1 = await request(app).post('/todos').send({ title: 'Todo A' });
+    const r2 = await request(app).post('/todos').send({ title: 'Todo B' });
+    const getRes = await request(app).get('/todos');
+    expect(getRes.body).toHaveLength(2);
+    expect(getRes.body[0].id).toBe(r1.body.id);
+    expect(getRes.body[1].id).toBe(r2.body.id);
+    expect(getRes.body[0].title).not.toBe(getRes.body[1].title);
+  });
+});
+
+describe('Regression: HTTP method correctness', () => {
+  it('PUT /todos returns 404 (not implemented at collection level)', async () => {
+    const res = await request(app).put('/todos').send({ title: 'Nope' });
+    expect(res.status).toBe(404);
+  });
+
+  it('DELETE /todos returns 404 (not implemented at collection level)', async () => {
+    const res = await request(app).delete('/todos');
+    expect(res.status).toBe(404);
+  });
+
+  it('PATCH /todos returns 404 (not implemented)', async () => {
+    const res = await request(app).patch('/todos').send({ title: 'Nope' });
+    expect(res.status).toBe(404);
+  });
+});
