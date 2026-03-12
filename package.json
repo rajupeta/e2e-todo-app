@@ -7,7 +7,7 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "pretest": "test -x node_modules/.bin/jest || NODE_ENV=development npm install --include=dev",
-    "test": "jest --verbose"
+    "test": "jest --verbose --runInBand"
   },
   "dependencies": {
     "cors": "^2.8.5",
