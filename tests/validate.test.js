@@ -64,6 +64,30 @@ describe('validateCreateTodo', () => {
     expect(next).not.toHaveBeenCalled();
   });
 
+  it('returns 400 when title is null', () => {
+    const req = mockReq({ title: null });
+    const res = mockRes();
+    const next = mockNext();
+
+    validateCreateTodo(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Title is required' });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when title is a boolean', () => {
+    const req = mockReq({ title: true });
+    const res = mockRes();
+    const next = mockNext();
+
+    validateCreateTodo(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Title is required' });
+    expect(next).not.toHaveBeenCalled();
+  });
+
   it('calls next() when title is a valid non-empty string', () => {
     const req = mockReq({ title: 'Buy milk' });
     const res = mockRes();
@@ -137,6 +161,53 @@ describe('validateUpdateTodo', () => {
 
   it('calls next() when both valid title and completed are provided', () => {
     const req = mockReq({ title: 'Updated', completed: false });
+    const res = mockRes();
+    const next = mockNext();
+
+    validateUpdateTodo(req, res, next);
+
+    expect(next).toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when title is null', () => {
+    const req = mockReq({ title: null });
+    const res = mockRes();
+    const next = mockNext();
+
+    validateUpdateTodo(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Title is required' });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when completed is a number', () => {
+    const req = mockReq({ completed: 1 });
+    const res = mockRes();
+    const next = mockNext();
+
+    validateUpdateTodo(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Completed must be a boolean' });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when completed is null', () => {
+    const req = mockReq({ completed: null });
+    const res = mockRes();
+    const next = mockNext();
+
+    validateUpdateTodo(req, res, next);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({ error: 'Completed must be a boolean' });
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it('calls next() when completed is false', () => {
+    const req = mockReq({ completed: false });
     const res = mockRes();
     const next = mockNext();
 
