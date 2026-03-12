@@ -35,6 +35,18 @@ describe('storage', () => {
       const todos = await readTodos();
       expect(todos).toEqual([]);
     });
+
+    it('returns empty array when file contains a non-array JSON value', async () => {
+      await fs.writeFile(TODOS_FILE, '{"key": "value"}', 'utf8');
+      const todos = await readTodos();
+      expect(todos).toEqual([]);
+    });
+
+    it('returns empty array when file contains just whitespace', async () => {
+      await fs.writeFile(TODOS_FILE, '   \n  ', 'utf8');
+      const todos = await readTodos();
+      expect(todos).toEqual([]);
+    });
   });
 
   describe('writeTodos', () => {
@@ -60,6 +72,13 @@ describe('storage', () => {
       await writeTodos([{ id: '2', title: 'Second' }]);
       const todos = await readTodos();
       expect(todos).toEqual([{ id: '2', title: 'Second' }]);
+    });
+
+    it('can write and read back an empty array', async () => {
+      await writeTodos([{ id: '1', title: 'Something' }]);
+      await writeTodos([]);
+      const todos = await readTodos();
+      expect(todos).toEqual([]);
     });
   });
 });
